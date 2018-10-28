@@ -531,6 +531,7 @@ private extension DependencyGraph {
                    configuration: [TokenBox<ConfigurationAnnotation>],
                    file: String) throws -> Reference {
         
+        let type = referenceAnnotation.value.type
         let name = referenceAnnotation.value.name
         guard let target = dependencyContainersByName[name] else {
             throw InspectorError.invalidDependencyGraph(referenceAnnotation.printableDependency(file: file),
@@ -543,7 +544,7 @@ private extension DependencyGraph {
         let fileLocation = FileLocation(line: referenceAnnotation.line, file: file)
         
         return Reference(dependencyName: name,
-                         type: referenceAnnotation.value.type,
+                         type: type,
                          target: target,
                          source: source,
                          configuration: configuration,

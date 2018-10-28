@@ -144,6 +144,14 @@ final class GeneratorTests: XCTestCase {
             XCTFail("Unexpected error \(error)")
         }
     }
+    
+    func test_reference_resolution_by_type() {
+        do {
+            try performTest()
+        } catch {
+            XCTFail("Unexpected error \(error)")
+        }
+    }
 }
 
 // MARK: - Utils

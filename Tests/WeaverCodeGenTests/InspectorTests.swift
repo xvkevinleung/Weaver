@@ -13,9 +13,9 @@ import SourceKittenFramework
 
 final class InspectorTests: XCTestCase {
     
-    func test_inspector_should_build_a_valid_dependency_graph() {
+    func test_valid_dependency_graph() {
         
-        let file = File(contents: """
+        let code = """
 final class API {
   // weaver: sessionManager = SessionManager <- SessionManagerProtocol
 }
@@ -44,24 +44,17 @@ final class App {
   // weaver: loginController = LoginController
   // weaver: loginController.scope = .container
 }
-""")
+"""
         
         do {
-            let lexer = Lexer(file, fileName: "test.swift")
-            let tokens = try lexer.tokenize()
-            let parser = Parser(tokens, fileName: "test.swift")
-            let syntaxTree = try parser.parse()
-            let linker = try Linker(syntaxTrees: [syntaxTree])
-            let inspector = Inspector(dependencyGraph: linker.dependencyGraph)
-            
-            try inspector.validate()
+            try performTest(string: code)
         } catch {
             XCTFail("Unexpected error: \(error)")
         }
     }
     
-    func test_inspector_should_build_an_invalid_dependency_graph_because_of_an_unresolvable_dependency() {
-        let file = File(contents: """
+    func test_unresolvable_dependency() {
+        let code = """
 final class API {
   // weaver: sessionManager <- SessionManagerProtocol
 }
@@ -69,17 +62,10 @@ final class API {
 final class App {
   // weaver: api = API
 }
-""")
+"""
         
         do {
-            let lexer = Lexer(file, fileName: "test.swift")
-            let tokens = try lexer.tokenize()
-            let parser = Parser(tokens, fileName: "test.swift")
-            let syntaxTree = try parser.parse()
-            let linker = try Linker(syntaxTrees: [syntaxTree])
-            let inspector = Inspector(dependencyGraph: linker.dependencyGraph)
-            
-            try inspector.validate()
+            try performTest(string: code)
             XCTFail("Expected error.")
         } catch let error as InspectorError {
             XCTAssertEqual(error, InspectorError.invalidDependencyGraph(PrintableDependency(fileLocation: FileLocation(line: 1, file: "test.swift"),
@@ -95,8 +81,8 @@ final class App {
         }
     }
     
-    func test_inspector_should_build_an_invalid_dependency_graph_because_of_a_cyclic_dependency() {
-        let file = File(contents: """
+    func test_cyclic_dependency() {
+        let code = """
 final class API {
     // weaver: session = Session <- SessionProtocol
     // weaver: session.scope = .container
@@ -114,17 +100,10 @@ final class SessionManager {
     // weaver: api = API <- APIProtocol
     // weaver: api.scope = .weak
 }
-""")
+"""
         
         do {
-            let lexer = Lexer(file, fileName: "test.swift")
-            let tokens = try lexer.tokenize()
-            let parser = Parser(tokens, fileName: "test.swift")
-            let syntaxTree = try parser.parse()
-            let linker = try Linker(syntaxTrees: [syntaxTree])
-            let inspector = Inspector(dependencyGraph: linker.dependencyGraph)
-            
-            try inspector.validate()
+            try performTest(string: code)
             XCTFail("Expected error.")
         } catch let error as InspectorError {
             let underlyingError = InspectorAnalysisError.cyclicDependency(history: [
@@ -141,8 +120,8 @@ final class SessionManager {
         }
     }
     
-    func test_inspector_should_build_a_valid_dependency_graph_with_a_lazy_loaded_dependency_cycle() {
-        let file = File(contents: """
+    func test_lazy_loaded_dependency_cycle() {
+        let code = """
 final class API {
     // weaver: session = Session <- SessionProtocol
     // weaver: session.scope = .container
@@ -160,68 +139,32 @@ final class SessionManager {
     // weaver: api = API <- APIProtocol
     // weaver: api.scope = .weak
 }
-""")
+"""
         
         do {
-            let lexer = Lexer(file, fileName: "test.swift")
-            let tokens = try lexer.tokenize()
-            let parser = Parser(tokens, fileName: "test.swift")
-            let syntaxTree = try parser.parse()
-            let linker = try Linker(syntaxTrees: [syntaxTree])
-            let inspector = Inspector(dependencyGraph: linker.dependencyGraph)
-            
-            try inspector.validate()
+            try performTest(string: code)
         } catch {
             XCTFail("Unexpected error: \(error)")
         }
     }
     
-    func test_inspector_should_build_a_valid_dependency_graph_with_an_unresolvable_ref_with_custom_builder_set_to_true() {
-        let file = File(contents: """
+    func test_unresolvable_reference_with_custom_builder() {
+        let code = """
 final class API {
     // weaver: api <- APIProtocol
     // weaver: api.builder = API.make
 }
-""")
+"""
         
         do {
-            let lexer = Lexer(file, fileName: "test.swift")
-            let tokens = try lexer.tokenize()
-            let parser = Parser(tokens, fileName: "test.swift")
-            let syntaxTree = try parser.parse()
-            let linker = try Linker(syntaxTrees: [syntaxTree])
-            let inspector = Inspector(dependencyGraph: linker.dependencyGraph)
-            
-            try inspector.validate()
+            try performTest(string: code)
         } catch {
             XCTFail("Unexpected error: \(error)")
         }
     }
     
-    func test_inspector_should_build_a_valid_dependency_graph_with_an_unbuildable_dependency_with_custom_builder_set_to_true() {
-        let file = File(contents: """
-final class API {
-    // weaver: api = API <- APIProtocol
-    // weaver: api.builder = API.make
-}
-""")
-        
-        do {
-            let lexer = Lexer(file, fileName: "test.swift")
-            let tokens = try lexer.tokenize()
-            let parser = Parser(tokens, fileName: "test.swift")
-            let syntaxTree = try parser.parse()
-            let linker = try Linker(syntaxTrees: [syntaxTree])
-            let inspector = Inspector(dependencyGraph: linker.dependencyGraph)
-            
-            try inspector.validate()
-        } catch {
-            XCTFail("Unexpected error: \(error)")
-        }
-    }
-    
-    func test_inspector_should_build_a_valid_dependency_graph_with_a_more_complex_custom_builder_resolution() {
-        let file = File(contents: """
+    func test_complex_custom_builder_resolution() {
+        let code = """
 final class AppDelegate {
     // weaver: appDelegate = AppDelegateProtocol
     // weaver: appDelegate.scope = .container
@@ -235,24 +178,17 @@ final class AppDelegate {
 final class ViewController {
     // weaver: appDelegate <- AppDelegateProtocol
 }
-""")
+"""
         
         do {
-            let lexer = Lexer(file, fileName: "test.swift")
-            let tokens = try lexer.tokenize()
-            let parser = Parser(tokens, fileName: "test.swift")
-            let syntaxTree = try parser.parse()
-            let linker = try Linker(syntaxTrees: [syntaxTree])
-            let inspector = Inspector(dependencyGraph: linker.dependencyGraph)
-            
-            try inspector.validate()
+            try performTest(string: code)
         } catch {
             XCTFail("Unexpected error: \(error)")
         }
     }
     
-    func test_inspector_should_build_an_invalid_dependency_graph_because_of_a_custom_builder_not_shared_with_children() {
-        let file = File(contents: """
+    func test_custom_builder_not_shared_with_children() {
+        let code = """
 final class AppDelegate {
     // weaver: appDelegate <- AppDelegateProtocol
     // weaver: appDelegate.builder = AppDelegate.make
@@ -265,17 +201,10 @@ final class AppDelegate {
 final class ViewController {
     // weaver: appDelegate <- AppDelegateProtocol
 }
-""")
+"""
         
         do {
-            let lexer = Lexer(file, fileName: "test.swift")
-            let tokens = try lexer.tokenize()
-            let parser = Parser(tokens, fileName: "test.swift")
-            let syntaxTree = try parser.parse()
-            let linker = try Linker(syntaxTrees: [syntaxTree])
-            let inspector = Inspector(dependencyGraph: linker.dependencyGraph)
-            
-            try inspector.validate()
+            try performTest(string: code)
             XCTFail("Expected error.")
         } catch let error as InspectorError {
             let underlyingError = InspectorAnalysisError.unresolvableDependency(history: [
@@ -292,8 +221,8 @@ final class ViewController {
         }
     }
     
-    func test_inspector_should_build_a_valid_dependency_graph_with_two_references_of_the_same_type() {
-        let file = File(contents: """
+    func test_two_references_of_the_same_type() {
+        let code = """
 final class AppDelegate {
     // weaver: viewController1 = ViewController1 <- UIViewController
     // weaver: viewController1.scope = .container
@@ -313,24 +242,17 @@ final class Coordinator {
     // weaver: viewController2 <- UIViewController
     // weaver: viewController1 <- UIViewController
 }
-""")
+"""
         
         do {
-            let lexer = Lexer(file, fileName: "test.swift")
-            let tokens = try lexer.tokenize()
-            let parser = Parser(tokens, fileName: "test.swift")
-            let syntaxTree = try parser.parse()
-            let linker = try Linker(syntaxTrees: [syntaxTree])
-            let inspector = Inspector(dependencyGraph: linker.dependencyGraph)
-            
-            try inspector.validate()
+            try performTest(string: code)
         } catch {
             XCTFail("Unexpected error: \(error)")
         }
     }
     
-    func test_inspector_should_build_an_invalid_dependency_graph_because_of_an_incorrectly_named_reference() {
-        let file = File(contents: """
+    func test_misnamed_reference() {
+        let code = """
 final class AppDelegate {
     // weaver: viewController1 = ViewController1 <- UIViewController
     // weaver: viewController1.scope = .container
@@ -347,17 +269,10 @@ final class Coordinator {
     // weaver: viewController2 <- UIViewController
     // weaver: viewController3 <- UIViewController
 }
-""")
+"""
         
         do {
-            let lexer = Lexer(file, fileName: "test.swift")
-            let tokens = try lexer.tokenize()
-            let parser = Parser(tokens, fileName: "test.swift")
-            let syntaxTree = try parser.parse()
-            let linker = try Linker(syntaxTrees: [syntaxTree])
-            let inspector = Inspector(dependencyGraph: linker.dependencyGraph)
-            
-            try inspector.validate()
+            try performTest(string: code)
             XCTFail("Expected error.")
         } catch let error as InspectorError {
             let underlyingError = InspectorAnalysisError.unresolvableDependency(history: [
@@ -374,8 +289,8 @@ final class Coordinator {
         }
     }
     
-    func test_inspector_should_build_a_valid_dependency_graph_with_references_on_several_levels() {
-        let file = File(contents: """
+    func test_references_skipping_more_than_one_hierarchy_level() {
+        let code = """
 final class AppDelegate {
     // weaver: urlSession = URLSession
     // weaver: urlSession.scope = .container
@@ -414,24 +329,17 @@ final class MovieManager: MovieManaging {
 final class MovieAPI: APIProtocol {
     // weaver: urlSession <- URLSession
 }
-""")
+"""
         
         do {
-            let lexer = Lexer(file, fileName: "test.swift")
-            let tokens = try lexer.tokenize()
-            let parser = Parser(tokens, fileName: "test.swift")
-            let syntaxTree = try parser.parse()
-            let linker = try Linker(syntaxTrees: [syntaxTree])
-            let inspector = Inspector(dependencyGraph: linker.dependencyGraph)
-            
-            try inspector.validate()
+            try performTest(string: code)
         } catch {
             XCTFail("Unexpected error: \(error)")
         }
     }
     
-    func test_inspector_should_build_a_valid_dependencyGraph_with_two_isolated_objects() {
-        let file = File(contents: """
+    func test_isolated_objects() {
+        let code = """
 final class AppDelegate {
     // weaver: urlSession = URLSession
     // weaver: urlSession.scope = .container
@@ -471,24 +379,17 @@ final class MovieManager: MovieManaging {
 final class MovieAPI: APIProtocol {
     // weaver: urlSession <- URLSession
 }
-""")
+"""
         
         do {
-            let lexer = Lexer(file, fileName: "test.swift")
-            let tokens = try lexer.tokenize()
-            let parser = Parser(tokens, fileName: "test.swift")
-            let syntaxTree = try parser.parse()
-            let linker = try Linker(syntaxTrees: [syntaxTree])
-            let inspector = Inspector(dependencyGraph: linker.dependencyGraph)
-            
-            try inspector.validate()
+            try performTest(string: code)
         } catch {
             XCTFail("Unexpected error: \(error)")
         }
     }
     
-    func test_inspector_should_build_an_invalid_dependency_graph_with_an_object_flagged_as_isolated_with_a_non_isolated_dependent() {
-        let file = File(contents: """
+    func test_isolated_object_with_non_isolated_dependent() {
+        let code = """
 final class AppDelegate {
     // weaver: urlSession = URLSession
     // weaver: urlSession.scope = .container
@@ -529,17 +430,10 @@ final class MovieManager: MovieManaging {
 final class MovieAPI: APIProtocol {
     // weaver: urlSession <- URLSession
 }
-""")
+"""
         
         do {
-            let lexer = Lexer(file, fileName: "test.swift")
-            let tokens = try lexer.tokenize()
-            let parser = Parser(tokens, fileName: "test.swift")
-            let syntaxTree = try parser.parse()
-            let linker = try Linker(syntaxTrees: [syntaxTree])
-            let inspector = Inspector(dependencyGraph: linker.dependencyGraph)
-            
-            try inspector.validate()
+            try performTest(string: code)
             XCTFail("Expected error.")
         } catch let error as InspectorError {
             let underlyingError = InspectorAnalysisError.isolatedResolverCannotHaveReferents(type: Type(name: "HomeViewController"), referents: [
@@ -554,8 +448,8 @@ final class MovieAPI: APIProtocol {
         }
     }
     
-    func test_inspector_should_build_an_invalid_dependency_graph_with_an_unresolvable_dependency_on_two_levels() {
-        let file = File(contents: """
+    func test_unresolvable_dependency_on_two_hierachical_levels() {
+        let code = """
 final class AppDelegate {
     // weaver: homeViewController = HomeViewController <- UIViewController
     // weaver: homeViewController.scope = .container
@@ -569,17 +463,10 @@ final class HomeViewController: UIViewController {
 final class MovieViewController: UIViewController {
     // weaver: urlSession <- URLSession
 }
-""")
+"""
         
         do {
-            let lexer = Lexer(file, fileName: "test.swift")
-            let tokens = try lexer.tokenize()
-            let parser = Parser(tokens, fileName: "test.swift")
-            let syntaxTree = try parser.parse()
-            let linker = try Linker(syntaxTrees: [syntaxTree])
-            let inspector = Inspector(dependencyGraph: linker.dependencyGraph)
-            
-            try inspector.validate()
+            try performTest(string: code)
             XCTFail("Expected error.")
         } catch let error as InspectorError {
             let underlyingError = InspectorAnalysisError.unresolvableDependency(history: [
@@ -599,43 +486,29 @@ final class MovieViewController: UIViewController {
         }
     }
     
-    func test_inspector_should_build_a_valid_dependency_graph_with_a_public_type_with_no_dependents() {
-        let file = File(contents: """
+    func test_public_type_with_no_dependencies() {
+        let code = """
 public final class MovieViewController: UIViewController {
     // weaver: movieManager <- MovieManaging
 }
-""")
+"""
         
         do {
-            let lexer = Lexer(file, fileName: "test.swift")
-            let tokens = try lexer.tokenize()
-            let parser = Parser(tokens, fileName: "test.swift")
-            let syntaxTree = try parser.parse()
-            let linker = try Linker(syntaxTrees: [syntaxTree])
-            let inspector = Inspector(dependencyGraph: linker.dependencyGraph)
-            
-            try inspector.validate()
+            try performTest(string: code)
         } catch {
             XCTFail("Unexpected error: \(error)")
         }
     }
     
-    func test_inspector_should_build_an_invalid_dependency_graph_with_an_internal_type_with_no_dependents() {
-        let file = File(contents: """
+    func test_internal_type_with_no_dependency() {
+        let code = """
 final class MovieViewController: UIViewController {
     // weaver: movieManager <- MovieManaging
 }
-""")
+"""
         
         do {
-            let lexer = Lexer(file, fileName: "test.swift")
-            let tokens = try lexer.tokenize()
-            let parser = Parser(tokens, fileName: "test.swift")
-            let syntaxTree = try parser.parse()
-            let linker = try Linker(syntaxTrees: [syntaxTree])
-            let inspector = Inspector(dependencyGraph: linker.dependencyGraph)
-            
-            try inspector.validate()
+            try performTest(string: code)
             XCTFail("Expected error.")
         } catch let error as InspectorError {
             XCTAssertEqual(error, InspectorError.invalidDependencyGraph(PrintableDependency(fileLocation: FileLocation(line: 1, file: "test.swift"),
@@ -647,8 +520,8 @@ final class MovieViewController: UIViewController {
         }
     }
     
-    func test_inspector_should_build_a_valid_dependency_graph_with_an_internal_type_accessing_to_a_public_reference() {
-        let file = File(contents: """
+    func test_internal_type_with_a_reference_on_a_public_generic_type() {
+        let code = """
 public final class MovieViewController: UIViewController {
     // weaver: logger <- Logger<String>
     // weaver: movieManager = MovieManager
@@ -657,24 +530,17 @@ public final class MovieViewController: UIViewController {
 final class MovieManager {
     // weaver: logger <- Logger<String>
 }
-""")
+"""
         
         do {
-            let lexer = Lexer(file, fileName: "test.swift")
-            let tokens = try lexer.tokenize()
-            let parser = Parser(tokens, fileName: "test.swift")
-            let syntaxTree = try parser.parse()
-            let linker = try Linker(syntaxTrees: [syntaxTree])
-            let inspector = Inspector(dependencyGraph: linker.dependencyGraph)
-            
-            try inspector.validate()
+            try performTest(string: code)
         } catch {
             XCTFail("Unexpected error: \(error)")
         }
     }
     
-    func test_inspector_should_build_an_invalid_dependency_graph_with_an_internal_type_accessing_to_a_public_reference_with_the_wrong_type() {
-        let file = File(contents: """
+    func test_internal_type_with_a_reference_on_a_public_type_with_the_wrong_generic_type() {
+        let code = """
 public final class MovieViewController: UIViewController {
     // weaver: logger <- Logger<Int>
     // weaver: movieManager = MovieManager
@@ -683,17 +549,10 @@ public final class MovieViewController: UIViewController {
 final class MovieManager {
     // weaver: logger <- Logger<String>
 }
-""")
+"""
         
         do {
-            let lexer = Lexer(file, fileName: "test.swift")
-            let tokens = try lexer.tokenize()
-            let parser = Parser(tokens, fileName: "test.swift")
-            let syntaxTree = try parser.parse()
-            let linker = try Linker(syntaxTrees: [syntaxTree])
-            let inspector = Inspector(dependencyGraph: linker.dependencyGraph)
-            
-            try inspector.validate()
+            try performTest(string: code)
             XCTFail("Expected error.")
         } catch let error as InspectorError {
             XCTAssertEqual(error, InspectorError.invalidDependencyGraph(PrintableDependency(fileLocation: FileLocation(line: 1, file: "test.swift"),
@@ -703,5 +562,54 @@ final class MovieManager {
         } catch {
             XCTFail("Unexpected error: \(error)")
         }
+    }
+    
+    func test_reference_resolution_by_type() {
+        let code = """
+protocol FeeTest17Protocol {
+    func helloWorld()
+}
+
+final class FeeTest17: FeeTest17Protocol {
+    func helloWorld() {
+        print("Hello World")
+    }
+}
+
+final class FooTest17 {
+    // weaver: fee = FeeTest17 <- FeeTest17Protocol
+    // weaver: fee.scope = .container
+}
+
+final class FuuTest17 {
+    // weaver: fee1 <- FeeTest17Protocol
+    
+    init(dependencies: FuuTest17DependencyResolver) {
+        dependencies.fee1.helloWorld()
+    }
+}
+"""
+        
+        do {
+            try performTest(string: code)
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+    }
+}
+
+// MARK: - Utils
+
+private extension InspectorTests {
+    
+    func performTest(string: String) throws {
+        let file = File(contents: string)
+        let lexer = Lexer(file, fileName: "test.swift")
+        let tokens = try lexer.tokenize()
+        let parser = Parser(tokens, fileName: "test.swift")
+        let syntaxTree = try parser.parse()
+        let linker = try Linker(syntaxTrees: [syntaxTree])
+        let inspector = Inspector(dependencyGraph: linker.dependencyGraph)
+        try inspector.validate()
     }
 }
