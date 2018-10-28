@@ -43,9 +43,9 @@ public struct APIRequest<Model> {
     }
     
     public init(method: APIHTTPMethod = .get,
-         host: String? = nil,
-         path: String,
-         query: [String: Any] = [:]) {
+                host: String? = nil,
+                path: String,
+                query: [String: Any] = [:]) {
         
         let config = APIRequestConfig(method: method,
                                       host: host,
