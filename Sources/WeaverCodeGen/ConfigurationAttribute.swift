@@ -100,8 +100,9 @@ extension ConfigurationAnnotation {
     static func validate(configurationAttribute: ConfigurationAttribute, with dependencyKind: ConfigurationAttributeDependencyKind) -> Bool {
         switch (configurationAttribute, dependencyKind) {
         case (.scope, .registration),
+             (.scope(value: .weak), .reference),
+             (.scope(value: .graph), .reference),
              (.customBuilder, _):
-            
             return true
         case (.isIsolated, _),
              (.scope, _):

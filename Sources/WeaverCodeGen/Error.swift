@@ -26,6 +26,7 @@ enum ParserError: Error, Equatable {
     case unknownDependency(PrintableDependency)
     case dependencyDoubleDeclaration(PrintableDependency)
     case configurationAttributeDoubleAssignation(FileLocation, attribute: ConfigurationAttribute)
+    case incompatibleAttribute(ConfigurationAttribute, dependency: PrintableDependency)
 }
 
 enum SwiftGeneratorError: Error, Equatable {
@@ -134,6 +135,8 @@ extension ParserError: CustomStringConvertible {
             return dependency.xcodeLogString(.error, "Unknown dependency: '\(dependency.name)'")
         case .configurationAttributeDoubleAssignation(let location, let attribute):
             return location.xcodeLogString(.error, "Configuration attribute '\(attribute.name)' was already set")
+        case .incompatibleAttribute(let attribute, let dependency):
+            return dependency.xcodeLogString(.error, "Configuration attribute '\(attribute.name)' is not compatible with '\(dependency.name)'")
         }
     }
 }

@@ -150,6 +150,14 @@ final class SwiftGeneratorTests: XCTestCase {
             XCTFail("Unexpected error \(error)")
         }
     }
+    
+    func test_weak_parameter() {
+        do {
+            try performTest()
+        } catch {
+            XCTFail("Unexpected error \(error)")
+        }
+    }
 }
 
 // MARK: - Utils

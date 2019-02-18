@@ -168,14 +168,13 @@ private extension Parser {
             let _dependencyKind: ConfigurationAttributeDependencyKind? = referenceNames.contains(name) ?
                 .reference : registrationNames.contains(name) ?
                     .registration : nil
-            let error = ParserError.unknownDependency(printableDependency(line: configurationAnnotation.line, name: name))
+            let printableDependency = self.printableDependency(line: configurationAnnotation.line, name: name)
             if let dependencyKind = _dependencyKind {
-                if !ConfigurationAnnotation.validate(configurationAttribute: configurationAnnotation.value.attribute,
-                                                     with: dependencyKind) {
-                    throw error
+                if !ConfigurationAnnotation.validate(configurationAttribute: configurationAnnotation.value.attribute, with: dependencyKind) {
+                    throw ParserError.incompatibleAttribute(configurationAnnotation.value.attribute, dependency: printableDependency)
                 }
             } else {
-                throw error
+                throw ParserError.unknownDependency(printableDependency)
             }
             
         case .`self`:

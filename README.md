@@ -274,9 +274,9 @@ or
 Sets the scope of a dependency. The default scope being `graph`. Only works along with a registration annotation.
 
 The `scope` defines a dependency's access level and caching strategy. Four scopes are available:
-- `transient`: Always creates a new instance when resolved. Can't be accessed from children.
-- `graph`: A new instance is created when resolved the first time and then lives for the time the container lives. Can't be accessed from children.
-- `weak`: A new instance is created when resolved the first time and then lives for the time its strong references are living. Accessible from children.
+- `transient`: A new instance is created when resolved. Can't be accessed from children.
+- `graph`: One instance lives for the time the container lives. Can't be accessed from children.
+- `weak`: One instance lives for the time its strong references are living. Accessible from children.
 - `container`: Like graph, but accessible from children.
 
 Example:
