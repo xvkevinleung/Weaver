@@ -12,7 +12,7 @@ let package = Package(
         .package(url: "https://github.com/onevcat/Rainbow", from: "3.0.0"),
         .package(url: "https://github.com/jpsim/Yams.git", from: "2.0.0"),
         .package(url: "https://github.com/kylef/PathKit.git", from: "0.9.0"),
-        .package(url: "https://github.com/scribd/Meta.git", .branch("master")),
+        .package(url: "https://github.com/scribd/Meta.git", .revision("a955d8dfbaaf6416922967d190580ea5a4571288")),
         .package(url: "https://github.com/JohnSundell/ShellOut.git", from: "2.2.0")
     ],
     targets: [
